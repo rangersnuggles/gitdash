@@ -217,6 +217,18 @@ export default function GitHubDashboard() {
   const [phase, setPhase] = useState<'idle' | 'commits' | 'stats' | 'done'>('idle')
   const [enrichProgress, setEnrichProgress] = useState({ done: 0, total: 0 })
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [avatars, setAvatars] = useState<{ personal: string | null; business: string | null }>({ personal: null, business: null })
+
+  useEffect(() => {
+    async function fetchAvatars() {
+      const [p, b] = await Promise.all([
+        fetch(`https://api.github.com/users/${process.env.NEXT_PUBLIC_GITHUB_USERNAME_PERSONAL}`).then(r => r.json()).catch(() => ({})),
+        fetch(`https://api.github.com/users/${process.env.NEXT_PUBLIC_GITHUB_USERNAME_BUSINESS}`).then(r => r.json()).catch(() => ({})),
+      ])
+      setAvatars({ personal: p.avatar_url ?? null, business: b.avatar_url ?? null })
+    }
+    fetchAvatars()
+  }, [])
   const [tooltip, setTooltip] = useState<{ date: string; personal: number; business: number; x: number; y: number } | null>(null)
 
   const personalUsername = process.env.NEXT_PUBLIC_GITHUB_USERNAME_PERSONAL ?? 'Personal'
@@ -532,12 +544,22 @@ export default function GitHubDashboard() {
                 <div style={s.cardValue()}>{commits.length}</div>
               </div>
               <div style={s.card()}>
-                <div style={s.cardLabel}>{personalUsername} (personal)</div>
-                <div style={s.cardValue('#3b82f6')}>{stats.personal.length}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {avatars.personal && <img src={avatars.personal} alt={personalUsername} style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #bfdbfe', flexShrink: 0 }} />}
+                  <div>
+                    <div style={s.cardLabel}>{personalUsername}</div>
+                    <div style={s.cardValue('#3b82f6')}>{stats.personal.length}</div>
+                  </div>
+                </div>
               </div>
               <div style={s.card()}>
-                <div style={s.cardLabel}>{businessUsername} (business)</div>
-                <div style={s.cardValue('#639922')}>{stats.business.length}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {avatars.business && <img src={avatars.business} alt={businessUsername} style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #bbf7d0', flexShrink: 0 }} />}
+                  <div>
+                    <div style={s.cardLabel}>{businessUsername}</div>
+                    <div style={s.cardValue('#639922')}>{stats.business.length}</div>
+                  </div>
+                </div>
               </div>
               <div style={s.card()}>
                 <div style={s.cardLabel}>Repos touched</div>

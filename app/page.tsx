@@ -264,35 +264,37 @@ export default function GitHubDashboard() {
     await Promise.all(Array.from({ length: CONCURRENCY }, worker))
   }, [])
 
-  const fetchData = useCallback(async (daysToFetch: number) => {
+  const fetchData = useCallback(async (daysToFetch: number, forceFresh = false) => {
     setLoading(true)
     setPhase('commits')
     setCommits([])
     setEnrichProgress({ done: 0, total: 0 })
 
     try {
-      // Check Supabase cache (< 2 hours old)
-      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-      const { data: snapshots } = await supabase
-        .from('github_snapshots')
-        .select('*')
-        .gte('fetched_at', twoHoursAgo)
-        .order('fetched_at', { ascending: false })
-        .limit(2)
+      // Check Supabase cache (< 2 hours old) — skipped on forced refresh
+      if (!forceFresh) {
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+        const { data: snapshots } = await supabase
+          .from('github_snapshots')
+          .select('*')
+          .gte('fetched_at', twoHoursAgo)
+          .order('fetched_at', { ascending: false })
+          .limit(2)
 
-      if (snapshots && snapshots.length >= 2) {
-        const personal = snapshots.find((s: { account: string }) => s.account === 'personal')
-        const business = snapshots.find((s: { account: string }) => s.account === 'business')
-        if (personal && business) {
-          const all = [
-            ...(personal.commits as GitHubCommit[]),
-            ...(business.commits as GitHubCommit[]),
-          ]
-          setCommits(all)
-          setLastUpdated(new Date(personal.fetched_at))
-          setPhase('done')
-          setLoading(false)
-          return
+        if (snapshots && snapshots.length >= 2) {
+          const personal = snapshots.find((s: { account: string }) => s.account === 'personal')
+          const business = snapshots.find((s: { account: string }) => s.account === 'business')
+          if (personal && business) {
+            const all = [
+              ...(personal.commits as GitHubCommit[]),
+              ...(business.commits as GitHubCommit[]),
+            ]
+            setCommits(all)
+            setLastUpdated(new Date(personal.fetched_at))
+            setPhase('done')
+            setLoading(false)
+            return
+          }
         }
       }
 
@@ -505,7 +507,7 @@ export default function GitHubDashboard() {
               </button>
             ))}
           </div>
-          <button style={s.btn(isLoading, '#3b82f6')} onClick={() => fetchData(days)} disabled={isLoading}>
+          <button style={s.btn(isLoading, '#3b82f6')} onClick={() => fetchData(days, true)} disabled={isLoading}>
             {isLoading ? 'Fetching…' : 'Refresh'}
           </button>
           <button style={s.exportBtn} onClick={exportCSV} disabled={isLoading || commits.length === 0}>
@@ -715,18 +717,17 @@ export default function GitHubDashboard() {
       {/* ── Top repos ── */}
       <div style={s.section}>
         <div style={s.sectionTitle}>Top Repositories</div>
-        <div style={s.twoCol}>
-          {(['personal', 'business'] as const).map(account => {
-            const label = account === 'personal' ? personalUsername : businessUsername
-            const color = account === 'personal' ? '#378ADD' : '#639922'
-            const { commitList, linesList } = topRepos[account]
-            const maxC = commitList[0]?.[1] ?? 1
-            const maxL = linesList[0]?.[1] ?? 1
+        {(['personal', 'business'] as const).map(account => {
+          const label = account === 'personal' ? personalUsername : businessUsername
+          const color = account === 'personal' ? '#378ADD' : '#639922'
+          const { commitList, linesList } = topRepos[account]
+          const maxC = commitList[0]?.[1] ?? 1
+          const maxL = linesList[0]?.[1] ?? 1
 
-            return (
-              <div key={account}>
-                <div style={{ ...s.cardLabel, marginBottom: '12px', fontSize: '13px', color }}>{label}</div>
-
+          return (
+            <div key={account} style={{ marginBottom: account === 'personal' ? '24px' : 0 }}>
+              <div style={{ ...s.cardLabel, marginBottom: '12px', fontSize: '13px', color }}>{label}</div>
+              <div style={s.twoCol}>
                 <div style={s.subSection}>
                   <div style={s.subTitle}>By commit count</div>
                   {commitList.length === 0 && <div style={{ color: '#9ca3af', fontSize: '12px' }}>No data</div>}
@@ -759,9 +760,9 @@ export default function GitHubDashboard() {
                   ))}
                 </div>
               </div>
-            )
-          })}
-        </div>
+            </div>
+          )
+        })}
       </div>
 
       <style>{`

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
 export const runtime = 'edge'
 
 export async function GET(request: NextRequest) {
@@ -41,7 +40,7 @@ export async function GET(request: NextRequest) {
       `?q=author:${username}+committer-date:>=${sinceDate}` +
       `&per_page=${perPage}&page=${page}`
 
-    const res = await fetch(url, { headers, cache: 'no-store' })
+    const res = await fetch(url, { headers })
     if (!res.ok) break
 
     const data = await res.json()

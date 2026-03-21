@@ -116,16 +116,14 @@ const s = {
   heatmapGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: '4px',
+    gap: '3px',
   },
   heatCell: (color: string) =>
     ({
-      width: '100%',
-      paddingTop: '100%',
+      height: '18px',
       borderRadius: '3px',
       background: color,
       cursor: 'pointer',
-      position: 'relative',
     }) as React.CSSProperties,
   twoCol: {
     display: 'grid',

@@ -415,6 +415,21 @@ export default function GitHubDashboard() {
     [dayMap],
   )
 
+  // ── Hour-of-day map ───────────────────────────────────────────────────────
+
+  const hourMap = useMemo(() => {
+    const map: Record<number, { personal: number; business: number }> = {}
+    for (let h = 0; h < 24; h++) map[h] = { personal: 0, business: 0 }
+    for (const c of commits) {
+      const raw = c.commit?.author?.date ?? c.commit?.committer?.date
+      if (!raw) continue
+      const hour = new Date(raw).getHours()
+      if (c._account === 'personal') map[hour].personal++
+      else map[hour].business++
+    }
+    return map
+  }, [commits])
+
   // ── Streak + busiest weekday ──────────────────────────────────────────────
 
   const extras = useMemo(() => {
@@ -669,6 +684,40 @@ export default function GitHubDashboard() {
           </div>
         )}
       </div>
+
+      {/* ── Hour of day heatmap ── */}
+      {commits.length > 0 && (() => {
+        const maxHour = Math.max(1, ...Object.values(hourMap).map(h => h.personal + h.business))
+        const peakHour = Object.entries(hourMap).sort((a, b) => (b[1].personal + b[1].business) - (a[1].personal + a[1].business))[0]
+        const peakLabel = peakHour ? `${Number(peakHour[0]) % 12 || 12}${Number(peakHour[0]) < 12 ? 'am' : 'pm'}` : ''
+        return (
+          <div style={s.section}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={s.sectionTitle}>Time of Day</div>
+              {peakLabel && <div style={{ fontSize: '12px', color: '#6b7280' }}>Peak: <span style={{ fontWeight: 600, color: '#374151' }}>{peakLabel}</span></div>}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(24, 1fr)', gap: '3px' }}>
+              {Array.from({ length: 24 }, (_, h) => {
+                const { personal, business } = hourMap[h]
+                const color = heatColor(personal, business, maxHour)
+                return (
+                  <div key={h} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    <div
+                      style={{ height: '32px', width: '100%', borderRadius: '3px', background: color, cursor: 'pointer' }}
+                      title={`${h % 12 || 12}${h < 12 ? 'am' : 'pm'}: ${personal + business} commits`}
+                    />
+                    {(h % 6 === 0) && (
+                      <div style={{ fontSize: '10px', color: '#9ca3af' }}>
+                        {h === 0 ? '12a' : h === 12 ? '12p' : `${h % 12}${h < 12 ? 'a' : 'p'}`}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Chart 1: Commits over time ── */}
       <div style={s.section}>

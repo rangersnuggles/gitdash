@@ -516,10 +516,10 @@ export default function GitHubDashboard() {
         </div>
       )}
 
-      {/* ── Stats row 1 ── */}
-      <div style={s.statsRow}>
+      {/* ── Stats ── */}
+      <div style={{ ...s.statsRow, marginBottom: '16px' }}>
         {isLoading && phase === 'commits'
-          ? Array(4).fill(0).map((_, i) => <div key={i} style={s.skeletonCard} />)
+          ? Array(12).fill(0).map((_, i) => <div key={i} style={s.skeletonCard} />)
           : <>
               <div style={s.card()}>
                 <div style={s.cardLabel}>Total commits</div>
@@ -547,14 +547,6 @@ export default function GitHubDashboard() {
                 <div style={s.cardLabel}>Repos touched</div>
                 <div style={s.cardValue()}>{stats.repos.size}</div>
               </div>
-            </>}
-      </div>
-
-      {/* ── Stats row 2 ── */}
-      <div style={{ ...s.statsRow, marginBottom: '16px' }}>
-        {isLoading && phase === 'commits'
-          ? Array(4).fill(0).map((_, i) => <div key={i} style={s.skeletonCard} />)
-          : <>
               <div style={s.card('#f0fdf4', '#bbf7d0')}>
                 <div style={s.cardLabel}>Lines added</div>
                 <div style={s.cardValue('#16a34a')}>+{stats.totalAdded.toLocaleString()}</div>
@@ -573,27 +565,23 @@ export default function GitHubDashboard() {
                 <div style={s.cardLabel}>Avg lines/commit</div>
                 <div style={s.cardValue('#2563eb')}>{stats.avg.toLocaleString()}</div>
               </div>
+              <div style={s.card('#fefce8', '#fde68a')}>
+                <div style={s.cardLabel}>Longest streak</div>
+                <div style={s.cardValue('#d97706')}>{extras.maxStreak} days</div>
+              </div>
+              <div style={s.card('#fdf4ff', '#e9d5ff')}>
+                <div style={s.cardLabel}>Busiest weekday</div>
+                <div style={s.cardValue('#7c3aed')}>{extras.busiestDay}</div>
+              </div>
+              <div style={s.card('#f0f9ff', '#bae6fd')}>
+                <div style={s.cardLabel}>Busiest hour</div>
+                <div style={s.cardValue('#0284c7')}>{extras.busiestHour}</div>
+              </div>
+              <div style={s.card()}>
+                <div style={s.cardLabel}>Date range</div>
+                <div style={s.cardValue('#374151')}>{days === 0 ? 'All time' : `${days} days`}</div>
+              </div>
             </>}
-      </div>
-
-      {/* ── Extras row ── */}
-      <div style={{ ...s.statsRow, marginBottom: '16px' }}>
-        <div style={s.card('#fefce8', '#fde68a')}>
-          <div style={s.cardLabel}>Longest streak</div>
-          <div style={s.cardValue('#d97706')}>{extras.maxStreak} days</div>
-        </div>
-        <div style={s.card('#fdf4ff', '#e9d5ff')}>
-          <div style={s.cardLabel}>Busiest weekday</div>
-          <div style={s.cardValue('#7c3aed')}>{extras.busiestDay}</div>
-        </div>
-        <div style={s.card('#f0f9ff', '#bae6fd')}>
-          <div style={s.cardLabel}>Busiest hour</div>
-          <div style={s.cardValue('#0284c7')}>{extras.busiestHour}</div>
-        </div>
-        <div style={s.card()}>
-          <div style={s.cardLabel}>Date range</div>
-          <div style={s.cardValue('#374151')}>{days === 0 ? 'All time' : `${days} days`}</div>
-        </div>
       </div>
 
       {/* ── Heatmap ── */}

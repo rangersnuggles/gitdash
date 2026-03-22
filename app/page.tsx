@@ -484,9 +484,9 @@ export default function GitHubDashboard() {
         </div>
         <div style={s.headerRight}>
           <div style={s.rangeBtns}>
-            {[7, 30, 0].map(d => (
+            {[7, 30, 365].map(d => (
               <button key={d} style={s.rangeBtn(days === d)} onClick={() => setDays(d)} disabled={isLoading}>
-                {d === 0 ? 'All' : `${d}d`}
+                {`${d}d`}
               </button>
             ))}
           </div>
@@ -579,7 +579,7 @@ export default function GitHubDashboard() {
               </div>
               <div style={s.card()}>
                 <div style={s.cardLabel}>Date range</div>
-                <div style={s.cardValue('#374151')}>{days === 0 ? 'All time' : `${days} days`}</div>
+                <div style={s.cardValue('#374151')}>{`${days} days`}</div>
               </div>
             </>}
       </div>

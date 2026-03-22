@@ -83,7 +83,7 @@ const s = {
     }) as React.CSSProperties,
   statsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
     gap: '12px',
     marginBottom: '12px',
   },

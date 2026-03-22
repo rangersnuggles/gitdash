@@ -142,19 +142,6 @@ const s = {
   repoRow: { marginBottom: '8px' },
   subSection: { marginBottom: '20px' },
   subTitle: { fontSize: '12px', fontWeight: 600, color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' } as React.CSSProperties,
-  exportBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '6px 14px',
-    background: '#f0fdf4',
-    border: '1px solid #86efac',
-    borderRadius: '6px',
-    color: '#16a34a',
-    fontSize: '13px',
-    fontWeight: 600,
-    cursor: 'pointer',
-  } as React.CSSProperties,
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -170,7 +157,8 @@ function toYMD(date: Date) {
 
 function getDaysArray(days: number): string[] {
   const arr: string[] = []
-  for (let i = days - 1; i >= 0; i--) {
+  const count = days === 0 ? 3650 : days
+  for (let i = count - 1; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
     arr.push(toYMD(d))
@@ -297,9 +285,10 @@ export default function GitHubDashboard() {
       }
 
       // Phase 1 — fetch commit lists in parallel
+      const apiDays = daysToFetch === 0 ? 3650 : daysToFetch
       const [c1, c2] = await Promise.all([
-        fetch(`/api/github/commits?account=personal&days=${daysToFetch}`).then(r => r.json()),
-        fetch(`/api/github/commits?account=business&days=${daysToFetch}`).then(r => r.json()),
+        fetch(`/api/github/commits?account=personal&days=${apiDays}`).then(r => r.json()),
+        fetch(`/api/github/commits?account=business&days=${apiDays}`).then(r => r.json()),
       ])
 
       const personalCommits: GitHubCommit[] = c1.commits ?? []
@@ -453,33 +442,14 @@ export default function GitHubDashboard() {
     }
     const busiestIdx = weekCounts.indexOf(Math.max(...weekCounts))
 
-    return { maxStreak, busiestDay: weekdays[busiestIdx] }
-  }, [dayMap, daysList])
+    const peakHourEntry = Object.entries(hourMap)
+      .sort((a, b) => (b[1].personal + b[1].business) - (a[1].personal + a[1].business))[0]
+    const busiestHour = peakHourEntry
+      ? `${Number(peakHourEntry[0]) % 12 || 12}${Number(peakHourEntry[0]) < 12 ? 'am' : 'pm'}`
+      : '—'
 
-  // ── CSV export ────────────────────────────────────────────────────────────
-
-  function exportCSV() {
-    const rows = [
-      ['date', 'account', 'repo', 'sha', 'message', 'additions', 'deletions'],
-      ...commits.map(c => [
-        (c.commit?.author?.date ?? '').split('T')[0],
-        c._account ?? '',
-        c.repository?.full_name ?? '',
-        c.sha,
-        `"${(c.commit?.message ?? '').replace(/"/g, '""').split('\n')[0]}"`,
-        String(c._additions ?? 0),
-        String(c._deletions ?? 0),
-      ]),
-    ]
-    const csv = rows.map(r => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `github-commits-${toYMD(new Date())}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+    return { maxStreak, busiestDay: weekdays[busiestIdx], busiestHour }
+  }, [dayMap, daysList, hourMap])
 
   // ── Formatters ────────────────────────────────────────────────────────────
 
@@ -514,17 +484,14 @@ export default function GitHubDashboard() {
         </div>
         <div style={s.headerRight}>
           <div style={s.rangeBtns}>
-            {[7, 14, 30, 90].map(d => (
+            {[7, 30, 0].map(d => (
               <button key={d} style={s.rangeBtn(days === d)} onClick={() => setDays(d)} disabled={isLoading}>
-                {d}d
+                {d === 0 ? 'All' : `${d}d`}
               </button>
             ))}
           </div>
           <button style={s.btn(isLoading, '#3b82f6')} onClick={() => fetchData(days, true)} disabled={isLoading}>
             {isLoading ? 'Fetching…' : 'Refresh'}
-          </button>
-          <button style={s.exportBtn} onClick={exportCSV} disabled={isLoading || commits.length === 0}>
-            ↓ Export CSV
           </button>
         </div>
       </div>
@@ -559,19 +526,19 @@ export default function GitHubDashboard() {
                 <div style={s.cardValue()}>{commits.length}</div>
               </div>
               <div style={s.card()}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
                   {avatars.personal && <img src={avatars.personal} alt={personalUsername} style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #bfdbfe', flexShrink: 0 }} />}
-                  <div>
-                    <div style={s.cardLabel}>{personalUsername}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ ...s.cardLabel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personalUsername}</div>
                     <div style={s.cardValue('#3b82f6')}>{stats.personal.length}</div>
                   </div>
                 </div>
               </div>
               <div style={s.card()}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
                   {avatars.business && <img src={avatars.business} alt={businessUsername} style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid #bbf7d0', flexShrink: 0 }} />}
-                  <div>
-                    <div style={s.cardLabel}>{businessUsername}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ ...s.cardLabel, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{businessUsername}</div>
                     <div style={s.cardValue('#639922')}>{stats.business.length}</div>
                   </div>
                 </div>
@@ -619,9 +586,13 @@ export default function GitHubDashboard() {
           <div style={s.cardLabel}>Busiest weekday</div>
           <div style={s.cardValue('#7c3aed')}>{extras.busiestDay}</div>
         </div>
+        <div style={s.card('#f0f9ff', '#bae6fd')}>
+          <div style={s.cardLabel}>Busiest hour</div>
+          <div style={s.cardValue('#0284c7')}>{extras.busiestHour}</div>
+        </div>
         <div style={s.card()}>
           <div style={s.cardLabel}>Date range</div>
-          <div style={s.cardValue('#374151')}>{days} days</div>
+          <div style={s.cardValue('#374151')}>{days === 0 ? 'All time' : `${days} days`}</div>
         </div>
       </div>
 

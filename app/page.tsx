@@ -204,6 +204,28 @@ export default function GitHubDashboard() {
   const [enrichProgress, setEnrichProgress] = useState({ done: 0, total: 0 })
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [avatars, setAvatars] = useState<{ personal: string | null; business: string | null }>({ personal: null, business: null })
+  const [posthog, setPosthog] = useState<{
+    msbs: {
+      pageviews: number
+      uniqueVisitors: number
+      topProjects: { project: string; count: number }[]
+      linkTypes: { type: string; count: number }[]
+      referrers: { domain: string; count: number }[]
+    }
+    aquaslog: {
+      pageviews: number
+      uniqueVisitors: number
+      signups: number
+      referrers: { domain: string; count: number }[]
+    }
+  } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/posthog')
+      .then(r => r.json())
+      .then(data => { if (!data.error) setPosthog(data) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     async function fetchAvatars() {
@@ -582,6 +604,128 @@ export default function GitHubDashboard() {
                 <div style={s.cardValue('#374151')}>{`${days} days`}</div>
               </div>
             </>}
+      </div>
+
+      {/* ── Analytics (PostHog) ── */}
+      <div style={s.section}>
+        <div style={s.sectionTitle}>PostHog Analytics — Last 30 Days</div>
+        {!posthog ? (
+          <div style={{ color: '#9ca3af', fontSize: '13px' }}>Loading…</div>
+        ) : (
+          <div style={s.twoCol}>
+
+            {/* AquaSlog */}
+            <div>
+              <div style={{ ...s.subTitle, marginBottom: '12px' }}>AquaSlog</div>
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
+                <div style={s.card('#f0f9ff', '#bae6fd')}>
+                  <div style={s.cardLabel}>Pageviews</div>
+                  <div style={s.cardValue('#0284c7')}>{posthog.aquaslog.pageviews.toLocaleString()}</div>
+                </div>
+                <div style={s.card('#eff6ff', '#bfdbfe')}>
+                  <div style={s.cardLabel}>Unique visitors</div>
+                  <div style={s.cardValue('#2563eb')}>{posthog.aquaslog.uniqueVisitors.toLocaleString()}</div>
+                </div>
+                <div style={s.card('#f0fdf4', '#bbf7d0')}>
+                  <div style={s.cardLabel}>New signups</div>
+                  <div style={s.cardValue('#16a34a')}>{posthog.aquaslog.signups.toLocaleString()}</div>
+                </div>
+              </div>
+              {posthog.aquaslog.referrers.length > 0 && (
+                <div>
+                  <div style={s.subTitle}>Top referrers</div>
+                  {posthog.aquaslog.referrers.map(({ domain, count }) => {
+                    const max = posthog.aquaslog.referrers[0].count
+                    return (
+                      <div key={domain} style={s.repoRow}>
+                        <div style={s.barLabel}>
+                          {domain}
+                          <span style={{ float: 'right', color: '#6b7280', fontSize: '11px' }}>{count}</span>
+                        </div>
+                        <div style={s.barTrack}>
+                          <div style={{ height: '100%', width: `${(count / max) * 100}%`, background: '#0284c7', borderRadius: '3px' }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* MSBS */}
+            <div>
+              <div style={{ ...s.subTitle, marginBottom: '12px' }}>MakeShitBreakShit</div>
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' as const }}>
+                <div style={s.card('#fdf4ff', '#e9d5ff')}>
+                  <div style={s.cardLabel}>Pageviews</div>
+                  <div style={s.cardValue('#7c3aed')}>{posthog.msbs.pageviews.toLocaleString()}</div>
+                </div>
+                <div style={s.card('#faf5ff', '#ddd6fe')}>
+                  <div style={s.cardLabel}>Unique visitors</div>
+                  <div style={s.cardValue('#6d28d9')}>{posthog.msbs.uniqueVisitors.toLocaleString()}</div>
+                </div>
+              </div>
+              {posthog.msbs.topProjects.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={s.subTitle}>Top clicked projects</div>
+                  {posthog.msbs.topProjects.map(({ project, count }) => {
+                    const max = posthog.msbs.topProjects[0].count
+                    return (
+                      <div key={project} style={s.repoRow}>
+                        <div style={s.barLabel}>
+                          {project}
+                          <span style={{ float: 'right', color: '#6b7280', fontSize: '11px' }}>{count}</span>
+                        </div>
+                        <div style={s.barTrack}>
+                          <div style={{ height: '100%', width: `${(count / max) * 100}%`, background: '#7c3aed', borderRadius: '3px' }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {posthog.msbs.linkTypes.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={s.subTitle}>Clicks by link type</div>
+                  {posthog.msbs.linkTypes.map(({ type, count }) => {
+                    const max = posthog.msbs.linkTypes[0].count
+                    return (
+                      <div key={type} style={s.repoRow}>
+                        <div style={s.barLabel}>
+                          {type}
+                          <span style={{ float: 'right', color: '#6b7280', fontSize: '11px' }}>{count}</span>
+                        </div>
+                        <div style={s.barTrack}>
+                          <div style={{ height: '100%', width: `${(count / max) * 100}%`, background: '#a855f7', borderRadius: '3px', opacity: 0.8 }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {posthog.msbs.referrers.length > 0 && (
+                <div>
+                  <div style={s.subTitle}>Top referrers</div>
+                  {posthog.msbs.referrers.map(({ domain, count }) => {
+                    const max = posthog.msbs.referrers[0].count
+                    return (
+                      <div key={domain} style={s.repoRow}>
+                        <div style={s.barLabel}>
+                          {domain}
+                          <span style={{ float: 'right', color: '#6b7280', fontSize: '11px' }}>{count}</span>
+                        </div>
+                        <div style={s.barTrack}>
+                          <div style={{ height: '100%', width: `${(count / max) * 100}%`, background: '#c084fc', borderRadius: '3px', opacity: 0.8 }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
       </div>
 
       {/* ── Heatmap ── */}
